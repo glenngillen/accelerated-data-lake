@@ -7,3 +7,9 @@ envprefix="$lakename-$envname"
 
 aws cloudformation create-stack --region=us-east-1 --stack-name $envprefix --template-body file://DataLakeStructure/dataLakeStructure.yaml --parameters ParameterKey=EnvironmentPrefix,ParameterValue="$envprefix-" ParameterKey=KMSKeyARN,ParameterValue=""
 aws cloudformation create-stack --region=us-east-1 --stack-name "$envprefix-elasticsearch" --template-body file://Visualisation/elasticsearch/elasticsearch.yaml --parameters ParameterKey=EnvironmentPrefix,ParameterValue="$envprefix-" ParameterKey=IpAddress,ParameterValue="54.240.193.0/16"
+
+sam package --template-file ./Visualisation/lambdas/lambdaDeploy.yaml --output-template-file lambdaDeployCFN.yaml --s3-bucket "$envprefix-visualisationcodepackages"
+sam deploy --template-file lambdaDeployCFN.yaml --stack-name "$envprefix-elasticsearch-lambdas" --capabilities CAPABILITY_IAM --parameter-overrides EnvironmentPrefix="$envprefix-"
+
+sam package --template-file ./lambdaDeploy.yaml --output-template-file lambdaDeployCFN.yaml --s3-bucket "$envprefix-visualisationcodepackages"
+sam deploy --template-file lambdaDeployCFN.yaml --stack-name "$envprefix-datalake-elasticsearch-lambdas" --capabilities CAPABILITY_IAM --parameter-overrides EnvironmentPrefix=$envprefix
