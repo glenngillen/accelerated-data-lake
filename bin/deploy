@@ -5,8 +5,19 @@ read -p 'Name for this data lake: ' lakename
 read -p 'Name of environment to deploy in: ' envname
 envprefix="$lakename-$envname"
 
+echo "Creating base datalake stack..."
 aws cloudformation create-stack --region=us-east-1 --stack-name $envprefix --template-body file://DataLakeStructure/dataLakeStructure.yaml --parameters ParameterKey=EnvironmentPrefix,ParameterValue="$envprefix-" ParameterKey=KMSKeyARN,ParameterValue=""
+echo "Waiting for base datalaker to be created..."
+aws cloudformation wait stack-create-complete --region=us-east-1 --stack-name "$envprefix"
+
+echo "Adding ElasticSearch cluster for visualisations..."
 aws cloudformation create-stack --region=us-east-1 --stack-name "$envprefix-elasticsearch" --template-body file://Visualisation/elasticsearch/elasticsearch.yaml --parameters ParameterKey=EnvironmentPrefix,ParameterValue="$envprefix-" ParameterKey=IpAddress,ParameterValue="54.240.193.0/16"
 
-sam package --region=us-east-1 --template-file ./lambdaDeploy.yaml --output-template-file lambdaDeployCFN.yaml --s3-bucket "$envprefix-visualisationcodepackages"
-sam deploy --region=us-east-1 --template-file lambdaDeployCFN.yaml --stack-name "$envprefix-datalake-elasticsearch-lambdas" --capabilities CAPABILITY_IAM --parameter-overrides EnvironmentPrefix=$envprefix
+echo "Waiting for visualisations to be created..."
+aws cloudformation wait stack-create-complete --region=us-east-1 --stack-name "$envprefix-elasticsearch"
+
+echo "Packaging lambdas for visualisations..."
+sam package --region=us-east-1 --template-file ./Visualisation/lambdas/lambdaDeploy.yaml --output-template-file lambdaDeployCFN.yaml --s3-bucket "$envprefix-visualisationcodepackages"
+
+echo "Deploying visualisation lambdas..."
+sam deploy --region=us-east-1 --template-file ./Visualisation/lambdas/lambdaDeployCFN.yaml --stack-name "$envprefix-datalake-elasticsearch-lambdas" --capabilities CAPABILITY_IAM --parameter-overrides EnvironmentPrefix="$envprefix-"
