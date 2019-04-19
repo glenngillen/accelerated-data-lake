@@ -1,0 +1,8 @@
+#!/bin/bash
+
+#npm install
+read -p 'Name for this data lake: ' lakename
+read -p 'Name of environment to deploy in: ' envname
+envprefix="$lakename-$envname-"
+
+aws cloudformation create-stack --region=us-east-1 --stack-name $envprefix --template-body file://DataLakeStructure/dataLakeStructure.yaml --parameters ParameterKey=EnvironmentPrefix,ParameterValue=$envprefix ParameterKey=KMSKeyARN,ParameterValue=""
